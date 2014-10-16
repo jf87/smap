@@ -26,3 +26,12 @@ Thumbs.db
 venv
 python/build
 
+
+# Latex
+*.aux
+*.log
+*.out
+*.pdf
+*.synctex.gz
+*.toc
+
