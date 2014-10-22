@@ -41,7 +41,7 @@ def make_dns_meta(inst):
 def RunSMAP():
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--port",  help="The port sMAP runs on.", default=8080)
-    parser.add_argument("-c", "--config", help="The config file to load.", default='../conf/test.ini')
+    parser.add_argument("-c", "--config", help="The config file to load.", default='./conf/test.ini')
     args = parser.parse_args()
     port = int(args.port)
     config = args.config

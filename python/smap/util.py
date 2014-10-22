@@ -116,6 +116,15 @@ def build_recursive(d, suppress=['type', 'key', 'uuid']):
         cur[pieces[-1]] = v
     return rv
 
+def build_jsonld(d, suppress=['type', 'key', 'uuid']):
+    rv = {}
+    for k, v in d.iteritems():
+        if k in suppress:
+            continue
+        pieces = k.split('/')
+        cur = rv
+    pass
+
 def dict_merge(o1, o2):
     """Recursively merge dict o1 into dict o2.  
     """

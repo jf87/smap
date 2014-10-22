@@ -136,12 +136,14 @@ contain a ``uuid`` key to set the root identifier for the source.
         smapconf.SERVER = util.dict_merge(smapconf.SERVER, 
                                           dict(((k.lower(), v) for (k, v) in 
                                                 conf['server'].iteritems())))
+        print("server config: "+str(smapconf.SERVER))
     if 'logging' in conf:
         smapconf.LOGGING = util.dict_merge(smapconf.LOGGING, 
                                            dict(((k.lower(), v) for (k, v) in 
                                                  conf['logging'].iteritems())))
 
     # we need the root to have a uuid
+    # here we create the one smapinstance
     inst = core.SmapInstance(conf['/']['uuid'], **instargs)
     if 'Properties/Timezone' in conf['/']:
         print "Setting default timezone to", conf['/']['Properties/Timezone']
@@ -179,7 +181,6 @@ contain a ``uuid`` key to set the root identifier for the source.
 
             reports.append(reportinst)
             continue
-                      
         elif not s.startswith('/'):
             # path sections must start with a '/'
             # other sections might be present and could be parsed by
@@ -193,7 +194,9 @@ contain a ``uuid`` key to set the root identifier for the source.
         s = util.norm_path(s)
 
         # build the UUID for the item
+        # Dictionary with metadata
         props = util.build_recursive(dict(conf[s].items()))
+        print "props is: "+str(props)
         id = None
         if 'uuid' in conf[s]:
             key = None
@@ -208,6 +211,7 @@ contain a ``uuid`` key to set the root identifier for the source.
             # raise SmapLoadError("Every config file section must have a uuid or a key!")
 
         # create the timeseries or collection
+        # we have a collection
         if (s == '/' or 
             conf[s].get("type", None) == 'Collection' or 
             inst.get_collection(s) != None):
@@ -221,26 +225,33 @@ contain a ``uuid`` key to set the root identifier for the source.
             else:
                 c = core.Collection(s, inst)
                 inst.add_collection(s, c)
+            print "COLLECTION "+str(s)
+        # we have a timeseries
         elif conf[s].get("type", "Timeseries") == "Timeseries":
             if inst.get_timeseries(s) != None:
                 c = inst.get_timeseries(s)
-            else:   
+                print "we have all info"
+            else:
+                print "not all infos, so fall back to default"
                 try:
                     props['Properties']['UnitofMeasure']
                 except KeyError:
                     raise SmapLoadError("A Timeseries must have at least "
                                         "the Properites/UnitofMeasure key")
-                
                 # the Timeseries uses defaults if the conf file doesn't
                 # contain the right sections.
                 c = core.Timeseries(id, props['Properties']['UnitofMeasure'],
-                                    data_type=props['Properties'].get('ReadingType', 
-                                                                      core.Timeseries.DEFAULTS['Properties/ReadingType']),
-                                    timezone=props['Properties'].get('Timezone', 
-                                                                     core.Timeseries.DEFAULTS['Properties/Timezone']),
-                                    buffersz=int(props.get('BufferSize', core.Timeseries.DEFAULTS['BufferSize'])))
+                        data_type=props['Properties'].get('ReadingType', 
+                        core.Timeseries.DEFAULTS['Properties/ReadingType']),
+                        timezone=props['Properties'].get('Timezone', 
+                        core.Timeseries.DEFAULTS['Properties/Timezone']),
+                        buffersz=int(props.get('BufferSize',
+                            core.Timeseries.DEFAULTS['BufferSize'])))
+                print str(c)
                 inst.add_timeseries(s, c)
         else:
+            print "we are else? --> we are a driver"
+            #id is UUID
             if not id:
                 raise SmapLoadError("A driver must have a key or uuid to generate a namespace")
             
@@ -263,10 +274,12 @@ contain a ``uuid`` key to set the root identifier for the source.
         # Metadata and Description are shared between both Collections
         # and Timeseries
         if props.has_key('Metadata'):
+            print 'props has key metadata'
             # the driver may have added metadata; however config file
             # metadata overrides it
             c['Metadata'] = util.dict_merge(c.get('Metadata', {}),
                                             props['Metadata'])
+            print 'Metadata after adding the one from config'+str(c['Metadata'])
         if props.has_key('Description'):
             c['Description'] = props['Description']
         if key:

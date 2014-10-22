@@ -433,6 +433,7 @@ sMAP reporting functionality."""
     def start(self):
         """Causes the reporting subsystem and any drivers to be started
         """
+        print str(self.drivers.itervalues())
         map(lambda x: x.start(), self.drivers.itervalues())
 
         # set all checkers that loader has hooked in to be run on the

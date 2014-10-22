@@ -70,6 +70,7 @@ def load_schema(sf):
         try:
             path = os.path.join(d, 'schema', sf.lower() + '.av')
             obj = json.load(open(path, 'r'))
+            #print "THIS IS A SCHEMA:\n "+str(obj)
             break
         except:
             pass
@@ -77,6 +78,7 @@ def load_schema(sf):
         raise Exception('Cannot load schema: ' + sf.lower())
 
     s = schema.make_avsc_object(obj, SCHEMA_NAMES)
+    #print "S: \n"+str(s)
     return s
 
 # load all the schemas when we check an object
