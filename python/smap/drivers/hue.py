@@ -71,10 +71,13 @@ class HUE(driver.SmapDriver):
     # Get a list of lights
     val = self.getLights(self.ip, self.user)
     for i in val:
-      for j in val[i]:
-        self.lights.append({"id": str(i),
-          "name": str(val[i][j].replace(' ', '').lower())})
+      print 'i'
+      print i
+      if i == '2':
+        self.lights.append({"id": str(i), "name": str(i)})
+    print self.lights
     for light in self.lights:
+      print light
       for option in self.api:
         if option["access"] == "rw":
           self.add_timeseries('/'+light['name']+'/state/'+option["api"],
