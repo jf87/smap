@@ -54,15 +54,8 @@ class FHEM(driver.SmapDriver):
             if i["Name"] != None:
                 if i["Name"].endswith("_Clima"):
                     print "new thermostat found"
-                    tstats.append(str(i["Name"]))
+                    tstats.append({"name":str(i["Name"]), "device":str(i["Internals"]["device"])})
         return tstats
-
-#            if i["Name"] == "CUL_HM_HM_CC_RT_DN_2EEF7B_Clima":
-#                print i["Readings"]["desired-temp"]
-#                print i["Readings"]["measured-temp"]
-#
-#                print "\n\n\n\n"
-#                #print json.dumps(i, indent=4, sort_keys=True)
 
     def setup(self, opts):
         self.tz = opts.get('Metadata/Timezone', None)
@@ -74,12 +67,14 @@ class FHEM(driver.SmapDriver):
         print self.tstats
         for tstat in self.tstats:
             print tstat
+            tstat_name = tstat["name"]
+            tstat_device = tstat["device"]
             for option in self.api:
                 if option["access"] == "rw":
-                    self.add_timeseries('/'+tstat+'/'+option["api"],
+                    self.add_timeseries('/'+tstat_device+'/'+option["api"],
                             option["unit"], data_type=option["data_type"], timezone=self.tz)
                     setup={'model': option["act_type"], 'ip':self.ip,
-                            'range': option.get("range"), 'id': tstat,
+                            'range': option.get("range"), 'id': tstat_name,
                             'api': option["api"]}
                     if  option["act_type"] == "binary":
                         setup['states'] = option.get("states")
@@ -91,25 +86,27 @@ class FHEM(driver.SmapDriver):
                     if  option["act_type"] == "continuous":
                         act = ContinuousActuator(**setup)
 
-                    self.add_actuator('/'+ tstat + '/' + option["api"] + '_act',
+                    self.add_actuator('/'+ tstat_device + '/' + option["api"] + '_act',
                             option["unit"], act, data_type = option["data_type"],
                             write_limit=1)
                 else:
-                    self.add_timeseries('/'+ tstat + '/' +option["api"],
+                    self.add_timeseries('/'+ tstat_device + '/' +option["api"],
                             option["unit"], data_type=option["data_type"], timezone=self.tz)
     def start(self):
         # call self.read every self.rate seconds
         periodicSequentialCall(self.read).start(self.rate)
     def read(self):
         for tstat in self.tstats:
+            tstat_name = tstat["name"]
+            tstat_device = tstat["device"]
             #192.168.0.105:8083/fhem?cmd=jsonlist2+CUL_HM_HM_CC_RT_DN_2EEF7B_Clima&XHR=1
-            r = requests.get("http://" + self.ip + "/fhem?cmd=jsonlist2+" + tstat + "&XHR=1")
+            r = requests.get("http://" + self.ip + "/fhem?cmd=jsonlist2+" + tstat_name + "&XHR=1")
             val = json.loads(r.text)
             #print r.url
             #print val
             for option in self.api:
                 #print val["Results"][0]["Readings"][option["api"]]
-                self.add('/'+tstat +"/"+ option["api"],
+                self.add('/'+tstat_device +"/"+ option["api"],
                         float(val["Results"][0]["Readings"][option["api"]]["Value"]))
 
 class Actuator(actuate.SmapActuator):
