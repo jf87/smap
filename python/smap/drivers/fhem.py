@@ -41,6 +41,7 @@ import time
 from twisted.internet import threads
 
 class FHEM(driver.SmapDriver):
+    fake_bms = "http://localhost:8889/api/actuators/"
     api = [ {"api": "desired-temp", "access": "rw", "data_type":"double", "unit": "C",
         "act_type": "continuous", "range": [5,30]},
         {"api": "measured-temp", "access": "r", "data_type":"double", "unit": "C"}
@@ -101,17 +102,24 @@ class FHEM(driver.SmapDriver):
         # call self.read every self.rate seconds
         periodicSequentialCall(self.read).start(self.rate)
     def read(self):
+        i = 0
         for tstat in self.tstats:
             #192.168.0.105:8083/fhem?cmd=jsonlist2+CUL_HM_HM_CC_RT_DN_2EEF7B_Clima&XHR=1
             r = requests.get("http://" + self.ip + "/fhem?cmd=jsonlist2+" + tstat + "&XHR=1")
             val = json.loads(r.text)
             #print r.url
             #print val
+            j = 0
             for option in self.api:
                 #print val["Results"][0]["Readings"][option["api"]]
                 self.add('/'+tstat +"/"+ option["api"],
                         float(val["Results"][0]["Readings"][option["api"]]["Value"]))
-
+                print val["Results"][0]["Readings"][option["api"]]["Value"]
+                r = requests.post(self.fake_bms+str(52+i+j), data=json.dumps(
+                    {"Value": float(val["Results"][0]["Readings"][option["api"]]["Value"]), "Type": "Actuator",
+                     "HTTP":"http://localhost:8080/fhem/data/"+ tstat+'/state/'+option["api"]}))
+                j = j + 1
+            i = i + 1
 class Actuator(actuate.SmapActuator):
 
     def __init__(self, **opts):

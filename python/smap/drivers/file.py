@@ -87,3 +87,6 @@ class FileDriver(driver.SmapDriver):
 
         self.add_actuator('/point0', 'Switch Position',
                           act, data_type=data_type, write_limit=0)
+        self.set_metadata('/point0', {
+            'Metadata/PointName' : 'SDH.S4-15.AI 3'
+            })
