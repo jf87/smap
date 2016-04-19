@@ -4,7 +4,7 @@ Copyright (c) 2011, 2012, Regents of the University of California
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions 
+modification, are permitted provided that the following conditions
 are met:
 
   - Redistributions of source code must retain the above copyright
@@ -16,15 +16,15 @@ are met:
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS 
-FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL 
-THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES 
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) 
-HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, 
-STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
-ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
+THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 """
@@ -41,7 +41,6 @@ import time
 from twisted.internet import threads
 
 class FHEM(driver.SmapDriver):
-    fake_bms = "http://localhost:8889/api/actuators/"
     api = [ {"api": "desired-temp", "access": "rw", "data_type":"double", "unit": "C",
         "act_type": "continuous", "range": [5,30]},
         {"api": "measured-temp", "access": "r", "data_type":"double", "unit": "C"}
@@ -102,24 +101,17 @@ class FHEM(driver.SmapDriver):
         # call self.read every self.rate seconds
         periodicSequentialCall(self.read).start(self.rate)
     def read(self):
-        i = 0
         for tstat in self.tstats:
             #192.168.0.105:8083/fhem?cmd=jsonlist2+CUL_HM_HM_CC_RT_DN_2EEF7B_Clima&XHR=1
             r = requests.get("http://" + self.ip + "/fhem?cmd=jsonlist2+" + tstat + "&XHR=1")
             val = json.loads(r.text)
             #print r.url
             #print val
-            j = 0
             for option in self.api:
                 #print val["Results"][0]["Readings"][option["api"]]
                 self.add('/'+tstat +"/"+ option["api"],
                         float(val["Results"][0]["Readings"][option["api"]]["Value"]))
-                print val["Results"][0]["Readings"][option["api"]]["Value"]
-                r = requests.post(self.fake_bms+str(52+i+j), data=json.dumps(
-                    {"Value": float(val["Results"][0]["Readings"][option["api"]]["Value"]), "Type": "Actuator",
-                     "HTTP":"http://localhost:8080/fhem/data/"+ tstat+'/state/'+option["api"]}))
-                j = j + 1
-            i = i + 1
+
 class Actuator(actuate.SmapActuator):
 
     def __init__(self, **opts):
@@ -155,12 +147,12 @@ class DiscreteActuator(Actuator, actuate.NStateActuator):
         def __init__(self, **opts):
                 actuate.NStateActuator.__init__(self, opts["states"])
                 Actuator.__init__(self, **opts)
-                
+
 class ContinuousActuator(Actuator, actuate.ContinuousActuator):
     def __init__(self, **opts):
         actuate.ContinuousActuator.__init__(self, opts['range'])
         Actuator.__init__(self, **opts)
-                
+
 
 class ContinuousIntegerActuator(Actuator, actuate.ContinuousIntegerActuator):
         def __init__(self, **opts):
