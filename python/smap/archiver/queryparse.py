@@ -52,6 +52,7 @@ from smap.archiver.data import escape_string
 from smap.archiver.querydata import extract_data
 from smap.archiver import querygen as qg
 from smap.archiver import data, stream, help, ast, consumers
+from smap.archiver import settings
 
 import ply
 import ply.lex as lex
@@ -375,13 +376,16 @@ def p_query(t):
             t[0] = make_select_rv(t, t[2], t[4].render())
         elif len(t) == 3:
             t[0] = make_select_rv(t, t[2])
-        
+        settings.metrics.increment("select_count")
     elif t[1] == 'delete':
         t[0] = make_delete_rv(t)
+        settings.metrics.increment("delete_count")
     elif t[1] == 'set':
         t[0] = make_set_rv(t)
+        settings.metrics.increment("set_count")
     elif t[1] == 'apply':
         t[0] = t[2]
+        settings.metrics.increment("apply_count")
     elif t[1] == 'help':
         if len(t) == 2:
             t[0] = help.help(), None
@@ -406,7 +410,6 @@ def p_apply_statement(t):
     """apply_statement  : formula_pipe TO data_clause WHERE statement
                         | formula_pipe TO data_clause WHERE statement GROUP BY tag_list
     """
-    print "Existing restrictions", t[5].render()
     restrict = add_formula_restrictions(t[5].render(), t[1].restrict)
     tag_extractor, tag_query = make_select_rv(t, 
                                               make_tag_select('*'), 
@@ -417,7 +420,6 @@ def p_apply_statement(t):
     data_extractor = lambda x: x
     if len(t) > 7: group = t[8]
     else: group = None
-    print "Extra restrictions", t[1].restrict
     app = stream.OperatorApplicator(t[1].ast, t[3].dparams,
                                     consumers.make_outputfilter(t.parser.request), 
                                     group=group)
@@ -898,12 +900,15 @@ class QueryParser:
         return self.parser.parse(s, lexer=smapql_lex)
 
     def runquery(self, db, s, run=True, verbose=False):
+        logging.getLogger("queries.aql").info(s)
         ext, q = self.parse(s)
         if is_string(ext):
             return defer.succeed(ext)
         elif not isinstance(q, list):
             q = [None, q]
             ext = [None, ext]
+
+        logging.getLogger("queries.sql").info(q[1])
 
         if verbose:
             print q[1]
@@ -914,6 +919,7 @@ class QueryParser:
         for ext_, q_ in zip(ext[1:], q[1:]):
             def print_time(result, start):
                 logging.getLogger('stats').info("Query took %0.6fs" % (time.time() - start))
+                settings.metrics.timing('query_time', time.time() - start)
                 return result
             if not ext_:
                 d = db.runOperation(q_)
