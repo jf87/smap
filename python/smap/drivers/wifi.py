@@ -29,26 +29,14 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 @author Jonathan Fuerst <jonf@itu.dk>
 """
-import os, requests, __builtin__
-from smap import actuate, driver
+import requests
+from smap import driver
 from smap.util import periodicSequentialCall
-from smap.contrib import dtutil
-from requests.auth import HTTPDigestAuth
 import json
-import time
-import bcrypt
 import hashlib
 import unicodedata
 
-from twisted.internet import threads
-
 class WIFI(driver.SmapDriver):
-    client_api = [
-        {"api": "rssi", "access": "r", "data_type":"double", "unit": "dBm"},
-        {"api": "signalToNoiseRatio", "access": "r", "data_type":"double", "unit": "dB"},
-        {"api": "clientOS", "access": "r", "data_type":"string"},
-        {"api": "deviceName", "access": "r", "data_type":"string"}
-        ]
 
     def getDevices(self):
         devices = {}
@@ -71,9 +59,16 @@ class WIFI(driver.SmapDriver):
 
     def getClients(self):
         clients = []
+        devices_count = {}
         r = requests.get(self.url+"/hm/api/v1/clients?q=10", auth=(self.user, self.password))
         j = json.loads(r.text)
         for c in j:
+            deviceName = c["deviceName"]
+            deviceName = unicodedata.normalize('NFKD', deviceName).encode('ascii','ignore')
+            if deviceName in devices_count:
+                devices_count[deviceName] += 1
+            else:
+                devices_count[deviceName] = 1
             mac = c["macAddress"]
             mac_hashed = hashlib.sha512(mac.encode('latin-1')).hexdigest()
             mac_hashed = mac_hashed.replace("/", "")
@@ -112,13 +107,11 @@ class WIFI(driver.SmapDriver):
             except:
                 vendorName = "Unknown"
             snr_str = c["signalToNoiseRatio"][:-3]
-            deviceName = c["deviceName"]
-            deviceName = unicodedata.normalize('NFKD', deviceName).encode('ascii','ignore')
             clients.append({"id": mac_hashed, "deviceName":deviceName,
                             "rssi":rssi, "signalToNoiseRatio":snr,
                             "health": health, "channel":chan,
                             "clientOS":clientOS, "vendorName": vendorName})
-        return clients
+        return clients, devices_count
 
     def setup(self, opts):
         self.tz = opts.get('Metadata/Timezone', None)
@@ -128,17 +121,19 @@ class WIFI(driver.SmapDriver):
         self.rate = float(opts.get('Rate', 300))
         # Get all accesspoints
         self.devices = self.getDevices()
-        # for d in self.devices:
-            # self.add_collection("/"+d["deviceName"])
-        # Get all clients
-        # for option in self.api:
-            # self.add_timeseries('/'+ tstat_device + '/' +option["api"],
-                    # option["unit"], data_type=option["data_type"], timezone=self.tz)
+
     def start(self):
         # call self.read every self.rate seconds
         periodicSequentialCall(self.read).start(self.rate)
     def read(self):
-        self.clients = self.getClients()
+        self.clients, self.devices_count = self.getClients()
+        for k, v in self.devices_count.iteritems():
+            path = "/"+k +"/no_clients"
+            if self.get_timeseries(path) is None:
+                self.add_timeseries(path,
+                        "No.", data_type="long", timezone=self.tz)
+            self.add(path, v)
+
         for c in self.clients:
             d_n = c["deviceName"]
             c_id = c["id"]
@@ -169,7 +164,6 @@ class WIFI(driver.SmapDriver):
 
 def remove_non_ascii(text):
     return ''.join(i for i in text if ord(i)<128)
-
 
 def whatisthis(s):
     if isinstance(s, str):
