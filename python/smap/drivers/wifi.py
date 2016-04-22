@@ -60,6 +60,8 @@ class WIFI(driver.SmapDriver):
     def getClients(self):
         clients = []
         devices_count = {}
+        for k, v in self.devices.iteritems():
+            devices_count[k] = 0
         r = requests.get(self.url+"/hm/api/v1/clients?q=10", auth=(self.user, self.password))
         j = json.loads(r.text)
         for c in j:
