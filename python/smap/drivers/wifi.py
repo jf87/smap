@@ -37,6 +37,14 @@ import hashlib
 import unicodedata
 
 class WIFI(driver.SmapDriver):
+    devices_ts = [
+        {"key": "wifi0Channel", "name": "chan0", "unit": "Channel", "type": "long", "func": (lambda x: x)},
+        {"key": "wifi0Power", "name": "power0", "unit": "dBm", "type": "long", "func": (lambda x: x[:-4])},
+        {"key": "wifi1Channel", "name": "chan1", "unit": "Channel", "type": "long", "func": (lambda x: x)},
+        {"key": "wifi1Power", "name": "power1", "unit": "dBm", "type": "long", "func": (lambda x: x[:-4])},
+        {"key": "clients", "name": "no_clients_device", "unit": "Clients", "type": "long", "func": (lambda x: x)}
+    ]
+
 
     def getDevices(self):
         devices = {}
@@ -47,18 +55,69 @@ class WIFI(driver.SmapDriver):
             hostName = unicodedata.normalize('NFKD', hostName).encode('ascii','ignore')
             location = d["location"]
             location = unicodedata.normalize('NFKD', location).encode('ascii','ignore')
-            self.add_collection("/"+hostName)
-            cl2 = self.get_collection("/"+hostName)
+            floor = d['topologyName']
+            floor = unicodedata.normalize('NFKD', floor).encode('ascii','ignore')
+            if floor == 'ITU WIFI_Etage0':
+                floor_no = '0'
+            elif floor == 'ITU WIFI_Etage1':
+                floor_no = '1'
+            elif floor == 'ITU WIFI_Etage2':
+                floor_no = '2'
+            elif floor == 'ITU WIFI_Etage3':
+                floor_no = '3'
+            elif floor == 'ITU WIFI_Etage4':
+                floor_no = '4'
+            elif floor == 'ITU WIFI_Etage5':
+                floor_no = '5'
+            elif floor == 'ITU WIFI_Basement':
+                floor_no = '-1'
+            else:
+                floor_no = '-'
+            if self.get_collection("/"+floor_no) is None:
+                self.add_collection("/"+floor_no)
+            path = "/"+floor_no+'/'+hostName
+            if self.get_collection(path) is None:
+                self.add_collection(path)
+            cl2 = self.get_collection(path)
             cl2['Metadata'] = {
                 'Location' : {
-                      'Room' : location
+                    'Building': 'IT University of Copenhagen',
+                    'Street': 'Rued Langgaards Vej 7',
+                    'City': 'Copenhagen',
+                    'Floor': floor_no,
+                    'Room' : location
                 }
             }
-            devices[hostName] = {"deviceName": d["hostName"], "location": location}
+            for ts in self.devices_ts:
+                try:
+                    v = d[ts['key']]
+                    if isinstance(v, unicode):
+                        v = unicodedata.normalize('NFKD', v).encode('ascii','ignore')
+                    v = ts["func"](v)
+                    if ts["type"] == "long":
+                        v = long(v)
+                    elif ts["type"] == "float":
+                        v = float(v)
+                    if self.get_timeseries(path+"/"+ts["name"]) is None:
+                        self.add_timeseries(path+"/"+ts["name"],
+                            ts["unit"], data_type=ts["type"], timezone=self.tz)
+                    self.add(path+"/"+ts["name"], v)
+                except:
+                    if v is None:
+                        v = "None"
+                    print 'could not add '+str(v)+" to "+ts['key']
+
+            devices[hostName] = {"deviceName": d["hostName"], "location": location, "path": path}
         return devices
 
+    clients_ts = [
+        {"key": "channel", "name": "channel", "unit": "Channel", "type": "long", "func": (lambda x: x)},
+        {"key": "rssi", "name": "rssi", "unit": "dBm", "type": "long", "func": (lambda x : x[:-4])},
+        {"key": "health", "name": "health", "unit": "State", "type": "long", "func": (lambda x : x)},
+        {"key": "signalToNoiseRatio", "name": "snr", "unit": "dB", "type": "long", "func": (lambda x : x[:-3])},
+    ]
+
     def getClients(self):
-        clients = []
         devices_count = {}
         for k, v in self.devices.iteritems():
             devices_count[k] = 0
@@ -74,46 +133,60 @@ class WIFI(driver.SmapDriver):
             mac = c["macAddress"]
             mac_hashed = hashlib.sha512(mac.encode('latin-1')).hexdigest()
             mac_hashed = mac_hashed.replace("/", "")
-            # hashed = bcrypt.hashpw(mac.encode('latin-1'), bcrypt.gensalt())
-            # hashed = hashed.replace("/", "")
-            # print hashed
-            # hashed = mac
-            try:
-                rssi_str = c["rssi"][:-4]
-                rssi = float(rssi_str)
-            except:
-                rssi = 0.0
-            try:
-                snr_str = c["signalToNoiseRatio"][:-3]
-                snr = float(snr_str)
-            except:
-                snr = 0.0
-            try:
-                health = c["health"]
-                health = float(health)
-            except:
-                health = 0.0
-            try:
-                chan = c["channel"]
-                chan = float(chan)
-            except:
-                chan = 0.0
             try:
                 clientOS = c["clientOS"]
                 clientOS = unicodedata.normalize('NFKD', clientOS).encode('ascii','ignore')
+                if clientOS == "":
+                    clientOS = "Unknown"
             except:
                 clientOS = "Unknown"
             try:
                 vendorName = c["vendorName"]
                 vendorName = unicodedata.normalize('NFKD', vendorName).encode('ascii','ignore')
+                if vendorName == "":
+                    vendorName = "Unknown"
             except:
                 vendorName = "Unknown"
-            snr_str = c["signalToNoiseRatio"][:-3]
-            clients.append({"id": mac_hashed, "deviceName":deviceName,
-                            "rssi":rssi, "signalToNoiseRatio":snr,
-                            "health": health, "channel":chan,
-                            "clientOS":clientOS, "vendorName": vendorName})
-        return clients, devices_count
+            path = self.devices[deviceName]["path"]+"/"+ str(mac_hashed)
+            for ts in self.clients_ts:
+                try:
+                    v = c[ts['key']]
+                    if isinstance(v, unicode):
+                        v = unicodedata.normalize('NFKD', v).encode('ascii','ignore')
+                    v = ts["func"](v)
+                    if ts["type"] == "long":
+                        v = long(v)
+                    elif ts["type"] == "float":
+                        v = float(v)
+                    if self.get_timeseries(path+"/"+ts["name"]) is None:
+                        self.add_timeseries(path+"/"+ts["name"],
+                            ts["unit"], data_type=ts["type"], timezone=self.tz)
+                        self.set_metadata(path, {
+                            'Extra/clientOS' : clientOS
+                        })
+                        self.set_metadata(path, {
+                            'Extra/vendorName' : vendorName
+                        })
+                        self.set_metadata(path, {
+                            'Extra/accessPoint' : deviceName
+                        })
+                        self.set_metadata(path, {
+                            'Extra/id' : str(mac_hashed)
+                        })
+                    self.add(path+"/"+ts["name"], v)
+                except:
+                    if v is None:
+                        v = "None"
+                    print 'could not add '+str(v)+" to "+ts['key']
+        for k, v in devices_count.iteritems():
+            try:
+                path = self.devices[k]["path"] +"/no_clients"
+                if self.get_timeseries(path) is None:
+                    self.add_timeseries(path,
+                            "Clients", data_type="long", timezone=self.tz)
+                self.add(path, v)
+            except:
+                print 'could not add client count'
 
     def setup(self, opts):
         self.tz = opts.get('Metadata/Timezone', None)
@@ -128,41 +201,8 @@ class WIFI(driver.SmapDriver):
         # call self.read every self.rate seconds
         periodicSequentialCall(self.read).start(self.rate)
     def read(self):
-        self.clients, self.devices_count = self.getClients()
-        for k, v in self.devices_count.iteritems():
-            path = "/"+k +"/no_clients"
-            if self.get_timeseries(path) is None:
-                self.add_timeseries(path,
-                        "No.", data_type="long", timezone=self.tz)
-            self.add(path, v)
-
-        for c in self.clients:
-            d_n = c["deviceName"]
-            c_id = c["id"]
-            c_rssi = c["rssi"]
-            c_snr = c["signalToNoiseRatio"]
-            c_health = c["health"]
-            c_chan= c["channel"]
-            path = "/"+d_n +"/"+ str(c_id)
-            if self.get_timeseries(path+"/rssi") is None:
-                self.add_timeseries(path+"/rssi",
-                        "dBm", data_type="double", timezone=self.tz)
-                self.add_timeseries(path+"/snr",
-                        "dB", data_type="double", timezone=self.tz)
-                self.add_timeseries(path+"/health",
-                        "State", data_type="double", timezone=self.tz)
-                self.add_timeseries(path+"/channel",
-                        "Channel", data_type="double", timezone=self.tz)
-                self.set_metadata(path, {
-                                 'Extra/clientOS' : c["clientOS"]
-                })
-                self.set_metadata(path, {
-                                 'Extra/vendorName' : c["vendorName"]
-                })
-            self.add(path+"/rssi", c_rssi)
-            self.add(path+"/snr", c_snr)
-            self.add(path+"/health", c_health)
-            self.add(path+"/channel", c_chan)
+        self.getDevices()
+        self.getClients()
 
 def remove_non_ascii(text):
     return ''.join(i for i in text if ord(i)<128)
