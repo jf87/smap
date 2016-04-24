@@ -86,6 +86,9 @@ class WIFI(driver.SmapDriver):
                     'City': 'Copenhagen',
                     'Floor': floor_no,
                     'Room' : location
+                },
+                'Instrument': {
+                    "Model": "Access Point"
                 }
             }
             for ts in self.devices_ts:
