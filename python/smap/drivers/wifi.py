@@ -176,6 +176,9 @@ class WIFI(driver.SmapDriver):
                         self.set_metadata(path, {
                             'Extra/id' : str(mac_hashed)
                         })
+                    self.set_metadata(path, {
+                        'Instrument/Model' : 'Client'
+                    })
                     self.add(path+"/"+ts["name"], v)
                 except:
                     if v is None:

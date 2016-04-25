@@ -42,8 +42,8 @@ from twisted.internet import threads
 
 class FHEM(driver.SmapDriver):
     api = [
-        # {"api": "desired-temp", "access": "rw", "data_type":"double", "unit": "C",
-        # "act_type": "continuous", "range": [5,30]},
+        {"api": "desired-temp", "access": "rw", "data_type":"double", "unit": "C",
+        "act_type": "continuous", "range": [5,30]},
         {"api": "measured-temp", "access": "r", "data_type":"double", "unit": "C"}
         ]
 
@@ -72,23 +72,22 @@ class FHEM(driver.SmapDriver):
             tstat_device = tstat["device"]
             for option in self.api:
                 if option["access"] == "rw":
-                    pass
-                    # self.add_timeseries('/'+tstat_device+'/'+option["api"],
-                            # option["unit"], data_type=option["data_type"], timezone=self.tz)
-                    # setup={'model': option["act_type"], 'ip':self.ip,
-                            # 'range': option.get("range"), 'id': tstat_name,
-                            # 'api': option["api"]}
-                    # if  option["act_type"] == "binary":
-                        # setup['states'] = option.get("states")
-                        # act = BinaryActuator(**setup)
-                    # if  option["act_type"] == "continuousInteger":
-                        # act = ContinuousIntegerActuator(**setup)
-                    # if  option["act_type"] == "discrete":
-                        # act = DiscreteActuator(**setup)
-                    # if  option["act_type"] == "continuous":
-                        # act = ContinuousActuator(**setup)
+                    ts = self.add_timeseries('/'+tstat_device+'/'+option["api"],
+                            option["unit"], data_type=option["data_type"], timezone=self.tz)
+                    setup={'model': option["act_type"], 'ip':self.ip,
+                            'range': option.get("range"), 'id': tstat_name,
+                            'api': option["api"]}
+                    if  option["act_type"] == "binary":
+                        setup['states'] = option.get("states")
+                        act = BinaryActuator(**setup)
+                    if  option["act_type"] == "continuousInteger":
+                        act = ContinuousIntegerActuator(**setup)
+                    if  option["act_type"] == "discrete":
+                        act = DiscreteActuator(**setup)
+                    if  option["act_type"] == "continuous":
+                        act = ContinuousActuator(**setup)
                     # ts = self.add_timeseries('/'+ tstat_device + '/' + option["api"] + '_act', option["unit"], data_type=option["data_type"])
-                    # ts.add_actuator(act)
+                    ts.add_actuator(act)
                 else:
                     self.add_timeseries('/'+ tstat_device + '/' +option["api"],
                             option["unit"], data_type=option["data_type"], timezone=self.tz)
@@ -115,6 +114,7 @@ class Actuator(actuate.SmapActuator):
         self.ip = opts['ip']
         self.id = opts['id']
         self.api = opts['api']
+        actuate.SmapActuator.__init__(self, opts.get('archiver', 'http://130.226.142.195:8079'))
 
     def get_state(self, request):
         print "get state"
@@ -135,6 +135,12 @@ class Actuator(actuate.SmapActuator):
         print r.text
         return state
 
+
+class ContinuousActuator(Actuator, actuate.ContinuousActuator):
+    def __init__(self, **opts):
+        actuate.ContinuousActuator.__init__(self, opts["range"])
+        Actuator.__init__(self, **opts)
+
 class BinaryActuator(Actuator, actuate.BinaryActuator):
         def __init__(self, **opts):
                 actuate.BinaryActuator.__init__(self)
@@ -144,11 +150,6 @@ class DiscreteActuator(Actuator, actuate.NStateActuator):
         def __init__(self, **opts):
                 actuate.NStateActuator.__init__(self, opts["states"])
                 Actuator.__init__(self, **opts)
-
-class ContinuousActuator(Actuator, actuate.ContinuousActuator):
-    def __init__(self, **opts):
-        actuate.ContinuousActuator.__init__(self, opts['range'])
-        Actuator.__init__(self, **opts)
 
 
 class ContinuousIntegerActuator(Actuator, actuate.ContinuousIntegerActuator):
