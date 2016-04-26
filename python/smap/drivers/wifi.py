@@ -29,6 +29,7 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 @author Jonathan Fuerst <jonf@itu.dk>
 """
+import os
 import requests
 from smap import driver
 from smap.util import periodicSequentialCall
@@ -45,9 +46,7 @@ class WIFI(driver.SmapDriver):
         {"key": "clients", "name": "no_clients_device", "unit": "Clients", "type": "long", "func": (lambda x: x)}
     ]
 
-
     def getDevices(self):
-        devices = {}
         r = requests.get(self.url+"/hm/api/v1/devices", auth=(self.user, self.password))
         j = json.loads(r.text)
         for d in j:
@@ -55,6 +54,7 @@ class WIFI(driver.SmapDriver):
             hostName = unicodedata.normalize('NFKD', hostName).encode('ascii','ignore')
             location = d["location"]
             location = unicodedata.normalize('NFKD', location).encode('ascii','ignore')
+            location = location.replace("/", "").replace(" ", "")
             floor = d['topologyName']
             floor = unicodedata.normalize('NFKD', floor).encode('ascii','ignore')
             if floor == 'ITU WIFI_Etage0':
@@ -73,13 +73,23 @@ class WIFI(driver.SmapDriver):
                 floor_no = '-1'
             else:
                 floor_no = '-'
-            if self.get_collection("/"+floor_no) is None:
-                self.add_collection("/"+floor_no)
-            path = "/"+floor_no+'/'+hostName
+            path = "/"+floor_no
             if self.get_collection(path) is None:
                 self.add_collection(path)
-            cl2 = self.get_collection(path)
-            cl2['Metadata'] = {
+            path = path+'/'+location
+            print location
+            if self.get_collection(path) is None:
+                self.add_collection(path)
+            path = path+'/'+hostName
+            if self.get_collection(path) is None:
+                self.add_collection(path)
+            c = self.get_collection(path)
+            try:
+                num_id = self.devices[hostName]["numericalID"]
+            except:
+                print "could not get numericalID"
+                num_id = 0
+            c['Metadata'] = {
                 'Location' : {
                     'Building': 'IT University of Copenhagen',
                     'Street': 'Rued Langgaards Vej 7',
@@ -89,6 +99,10 @@ class WIFI(driver.SmapDriver):
                 },
                 'Instrument': {
                     "Model": "Access Point"
+                },
+                "System": "WiFi",
+                'Extra' : {
+                    "NumericalID": num_id
                 }
             }
             for ts in self.devices_ts:
@@ -110,29 +124,20 @@ class WIFI(driver.SmapDriver):
                         v = "None"
                     print 'could not add '+str(v)+" to "+ts['key']
 
-            devices[hostName] = {"deviceName": d["hostName"], "location": location, "path": path}
-        return devices
-
     clients_ts = [
         {"key": "channel", "name": "channel", "unit": "Channel", "type": "long", "func": (lambda x: x)},
         {"key": "rssi", "name": "rssi", "unit": "dBm", "type": "long", "func": (lambda x : x[:-4])},
         {"key": "health", "name": "health", "unit": "State", "type": "long", "func": (lambda x : x)},
-        {"key": "signalToNoiseRatio", "name": "snr", "unit": "dB", "type": "long", "func": (lambda x : x[:-3])},
+        {"key": "numericalID", "name": "wifi-ap", "unit": "AP", "type": "long", "func": (lambda x : x)},
+        {"key": "signalToNoiseRatio", "name": "snr", "unit": "dB", "type": "long", "func": (lambda x : x[:-3])}
     ]
 
     def getClients(self):
-        devices_count = {}
-        for k, v in self.devices.iteritems():
-            devices_count[k] = 0
         r = requests.get(self.url+"/hm/api/v1/clients?q=10", auth=(self.user, self.password))
         j = json.loads(r.text)
         for c in j:
             deviceName = c["deviceName"]
             deviceName = unicodedata.normalize('NFKD', deviceName).encode('ascii','ignore')
-            if deviceName in devices_count:
-                devices_count[deviceName] += 1
-            else:
-                devices_count[deviceName] = 1
             mac = c["macAddress"]
             mac_hashed = hashlib.sha512(mac.encode('latin-1')).hexdigest()
             mac_hashed = mac_hashed.replace("/", "")
@@ -150,7 +155,15 @@ class WIFI(driver.SmapDriver):
                     vendorName = "Unknown"
             except:
                 vendorName = "Unknown"
-            path = self.devices[deviceName]["path"]+"/"+ str(mac_hashed)
+            # path = self.devices[deviceName]["path"]+"/"+ str(mac_hashed)
+            path = "/WiFi-Clients/"+str(mac_hashed)
+            try:
+                num_id = self.devices[deviceName]["numericalID"]
+                c["numericalID"] = num_id
+            except:
+                print "could not get numericalID :("
+                c["numericalID"] = 0
+
             for ts in self.clients_ts:
                 try:
                     v = c[ts['key']]
@@ -171,28 +184,16 @@ class WIFI(driver.SmapDriver):
                             'Extra/vendorName' : vendorName
                         })
                         self.set_metadata(path, {
-                            'Extra/accessPoint' : deviceName
-                        })
-                        self.set_metadata(path, {
-                            'Extra/id' : str(mac_hashed)
+                            'Extra/ID' : str(mac_hashed)
                         })
                     self.set_metadata(path, {
-                        'Instrument/Model' : 'Client'
+                        'Instrument/Model' : 'WiFi-Client'
                     })
                     self.add(path+"/"+ts["name"], v)
                 except:
                     if v is None:
                         v = "None"
                     print 'could not add '+str(v)+" to "+ts['key']
-        for k, v in devices_count.iteritems():
-            try:
-                path = self.devices[k]["path"] +"/no_clients"
-                if self.get_timeseries(path) is None:
-                    self.add_timeseries(path,
-                            "Clients", data_type="long", timezone=self.tz)
-                self.add(path, v)
-            except:
-                print 'could not add client count'
 
     def setup(self, opts):
         self.tz = opts.get('Metadata/Timezone', None)
@@ -200,8 +201,16 @@ class WIFI(driver.SmapDriver):
         self.password = opts.get('password', None)
         self.user = opts.get('user', None)
         self.rate = float(opts.get('Rate', 300))
+        self.devices_json = opts.get('devices_json', None)
+        self.devices = {}
+        if os.path.exists(self.devices_json):
+            with open(self.devices_json) as f:
+                self.devices = json.loads(f.read())
+        else:
+            raise
+        print self.devices
         # Get all accesspoints
-        self.devices = self.getDevices()
+        self.getDevices()
 
     def start(self):
         # call self.read every self.rate seconds
