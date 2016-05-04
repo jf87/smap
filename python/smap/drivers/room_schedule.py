@@ -37,7 +37,7 @@ from smap.util import periodicSequentialCall
 import os, re, sys, logging
 import pytz, requests
 from datetime import datetime, timedelta
-
+import csv
 
 URL_STUDY_ACTIVITIES = 'https://dk.timeedit.net/web/itu/db1/public/ri6Q7Z6QQw0Z5gQ9f50on7Xx5YY00ZQ1ZYQycZw.ics'
 URL_ACTIVITIES = 'https://dk.timeedit.net/web/itu/db1/public/ri6g7058yYQZXxQ5oQgZZ0vZ56Y1Q0f5c0nZQwYQ.ics'
@@ -56,27 +56,27 @@ FAKES = [
 ]
 
 
-# Fix unicode madness
-reload(sys)
-sys.setdefaultencoding('utf8')
-
-# Establish timezone and present time
-TZ = pytz.timezone('Europe/Copenhagen')
-NOW = datetime.now(TZ)
-
 class ROOM_SCHEDULE(driver.SmapDriver):
     def setup(self, opts):
         self.tz = opts.get('Metadata/Timezone', None)
         self.rate = float(opts.get('Rate', 120))
+        self.url_activities = opts.get('url_activities', 'https://dk.timeedit.net/web/itu/db1/public/ri6g7058yYQZXxQ5oQgZZ0vZ56Y1Q0f5c0nZQwYQ.ics')
+        self.url_study_activities = opts.get('url_study_activities', 'https://dk.timeedit.net/web/itu/db1/public/ri6Q7Z6QQw0Z5gQ9f50on7Xx5YY00ZQ1ZYQycZw.ics')
+        self.file_courses = opts.get('file_courses', 'courses.csv')
+        self.courses = self.get_courses()
+        # Fix unicode madness
+        reload(sys)
+        sys.setdefaultencoding('utf8')
 
     def start(self):
         # Call read every 2 seconds
         periodicSequentialCall(self.read).start(self.rate)
 
     def read(self):
-        self.rooms = get_room_schedules()
+        self.now = datetime.now(pytz.timezone(self.tz))
+        self.courses = self.get_courses()
+        self.rooms = self.get_room_schedules()
         for r in self.rooms:
-            print r
             # normal rooms
             if r['name'][0] in ['0', '1', '2', '3', '4', '5']:
                 floor = r['name'][0]
@@ -91,6 +91,7 @@ class ROOM_SCHEDULE(driver.SmapDriver):
                 floor = '4'
             else:
                 print "ELSE"
+                floor = "-"
             value = long(r['empty'])
             room = r['name']
             path = "/"+floor
@@ -103,62 +104,101 @@ class ROOM_SCHEDULE(driver.SmapDriver):
                 self.add_timeseries(path+"/"+"calendar_booking",
                     "State", data_type="long", timezone=self.tz)
             self.add(path+"/"+"calendar_booking", value)
+            if "course" in r.keys():
+                c = r["course"]
+                if c != "":
+                    requests =  long(c['students_requests'])
+                    if self.get_timeseries(path+"/"+"students_course_base") is None:
+                        self.add_timeseries(path+"/"+"students_course_base",
+                            "No.", data_type="long", timezone=self.tz)
+                    self.add(path+"/"+"students_course_base", requests)
 
 
-def get_room_schedules():
+    def get_room_schedules(self):
+        # Fetch iCalendar sources and parse events
+        study_activities = self.fetch_and_parse(URL_STUDY_ACTIVITIES)
+        activities = self.fetch_and_parse(URL_ACTIVITIES)
+        events = study_activities + activities
+        # Remove duplicate events
+        events = {e['uid']: e for e in events}.values()
+        # Establish schedules of events for each room
+        logging.info('Establishing schedules')
+        schedules = {}
+        for event in events:
+            for room in event['rooms']:
+                if room not in schedules: schedules[room] = []
+                schedules[room].append(event)
+        schedules = {key: s for key, s in schedules.items() if not is_fake(key)}
 
-    # Fetch iCalendar sources and parse events
-    study_activities = fetch_and_parse(URL_STUDY_ACTIVITIES)
-    activities = fetch_and_parse(URL_ACTIVITIES)
-    events = study_activities + activities
-
-    # Remove duplicate events
-    events = {e['uid']: e for e in events}.values()
-
-    # Establish schedules of events for each room
-    logging.info('Establishing schedules')
-    schedules = {}
-    for event in events:
-        for room in event['rooms']:
-            if room not in schedules: schedules[room] = []
-            schedules[room].append(event)
-    schedules = {key: s for key, s in schedules.items() if not is_fake(key)}
-
-    # Merge adjacent and overlapping events in each schedule
-    logging.info('Merging events')
-    for schedule in schedules.itervalues():
-        schedule.sort(key=lambda event: event['start'])
-        merged = []
-        for event in schedule:
-            if merged and merged[-1]['end'] >= event['start']:
-                merged[-1]['end'] = event['end']
-            else:
-                merged.append(event)
-        schedule = merged
-
-    # Determine the status of each room and how long it will be empty for
-    logging.info('Determining status of rooms')
-    rooms = []
-    for name, schedule in schedules.iteritems():
-        room = {'name': name}
-        for event in schedule:
-            if NOW <= event['start']:
+        # Merge adjacent and overlapping events in each schedule
+        logging.info('Merging events')
+        for schedule in schedules.itervalues():
+            schedule.sort(key=lambda event: event['start'])
+            merged = []
+            for event in schedule:
+                if merged and merged[-1]['end'] >= event['start']:
+                    merged[-1]['end'] = event['end']
+                else:
+                    merged.append(event)
+            schedule = merged
+        # Determine the status of each room and how long it will be empty for
+        logging.info('Determining status of rooms')
+        rooms = []
+        for name, schedule in schedules.iteritems():
+            room = {'name': name}
+            for event in schedule:
+                if self.now <= event['start']:
+                    room['empty'] = True
+                    room['until'] = format_date(event['start'])
+                    room['empty_for'] = event['start'] - self.now
+                    break
+                if event['start'] <= self.now <= event['end']:
+                    room['course'] = event['course']
+                    room['empty'] = False
+                    room['until'] = format_date(event['end'])
+                    room['empty_for'] = self.now - event['end']
+                    break
+            if 'empty' not in room:
                 room['empty'] = True
-                room['until'] = format_date(event['start'])
-                room['empty_for'] = event['start'] - NOW
-                break
-            if event['start'] <= NOW <= event['end']:
-                room['empty'] = False
-                room['until'] = format_date(event['end'])
-                room['empty_for'] = NOW - event['end']
-                break
-        if 'empty' not in room:
-            room['empty'] = True
-            room['until'] = 'For the foreseeable future'
-            room['empty_for'] = timedelta.max
-        rooms.append(room)
-    rooms.sort(key=lambda room: room['empty_for'], reverse=True)
-    return rooms
+                room['until'] = 'For the foreseeable future'
+                room['empty_for'] = timedelta.max
+            rooms.append(room)
+        rooms.sort(key=lambda room: room['empty_for'], reverse=True)
+        return rooms
+
+    def fetch_and_parse(self, url):
+        logging.info('Fetching %s' % url)
+        ics = requests.get(url).text
+        logging.info('Parsing %s' % url)
+        calendar = parse(ics)
+        events = [{
+            'rooms': map(clean_room, event['LOCATION'].split(', ')),
+            'start': event['DTSTART'].astimezone(pytz.timezone(self.tz)),
+            'end': event['DTEND'].astimezone(pytz.timezone(self.tz)),
+            'uid': event['UID'],
+            'class_code': get_class_code(event['SUMMARY']),
+            'class_name': get_class_name(event['SUMMARY']),
+            'course': self.get_course(get_class_code(event['SUMMARY']))
+        } for event in calendar]
+        return events
+
+    def get_courses(self):
+        with open(self.file_courses, mode='r') as f:
+            reader = csv.reader(f)
+            courses = dict((rows[6], {"grad_program": rows[0],
+                                      "study_program": rows[1],
+                                      "course_name": rows[2],
+                                      "language": rows[3],
+                                      "students_requests" : rows[4],
+                                      "students_max" : rows[5],
+                                      "class_code": rows[6],
+                                      "semester": rows[7], }) for rows in reader)
+            return courses
+
+    def get_course(self, course):
+        if course in self.courses.keys():
+            return self.courses[course]
+        return ""
 
 
 def format_date(date): return date.strftime('%a %b %d at %H:%M')
@@ -174,18 +214,24 @@ def clean_room(room):
 def is_fake(room):
     return any([re.search(fake, room, re.IGNORECASE) for fake in FAKES])
 
-def fetch_and_parse(url):
-    logging.info('Fetching %s' % url)
-    ics = requests.get(url).text
-    logging.info('Parsing %s' % url)
-    calendar = parse(ics)
-    events = [{
-        'rooms': map(clean_room, event['LOCATION'].split(', ')),
-        'start': event['DTSTART'].astimezone(TZ),
-        'end': event['DTEND'].astimezone(TZ),
-        'uid': event['UID'],
-    } for event in calendar]
-    return events
+
+# TODO this does not always work...
+def get_class_code(summary):
+    x = findnth(summary, ",", 1)
+    y  = findnth(summary, ",", 2)
+    return summary[x+2:y]
+
+def get_class_name(summary):
+    x  = findnth(summary, ":", 0)
+    y  = findnth(summary, ",", 1)
+    return summary[x+2:y]
+
+
+def findnth(haystack, needle, n):
+    parts= haystack.split(needle, n+1)
+    if len(parts)<=n+1:
+        return -1
+    return len(haystack)-len(parts[-1])-len(needle)
 
 def lines_to_event(lines):
     # Unescape double escapes
@@ -228,7 +274,3 @@ def parse(ical):
                 events.append(lines_to_event(lines))
         except StopIteration:
             return events
-
-
-if __name__ == "__main__":
-    print get_room_schedules()

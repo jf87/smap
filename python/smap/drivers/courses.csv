@@ -1,0 +1,92 @@
+Grad.prog.,Study Prog,Course name,Lang,Requests,Max,Class code,Semester
+Bachelor,Digital Media and Design,Concept Development with Industry **,English,68,75,BACODEI1KU,2016-Spring
+Bachelor,Digital Media and Design,Context-based App-design **,English,32,40,BACOBAD1KU,2016-Spring
+Bachelor,Digital Media and Design,Digital Culture and Media **,Danish,65,70,1914002U,2016-Spring
+Bachelor,Digital Media and Design,Digital Material and Interactive Artefacts **,English,37,40,1914003U,2016-Spring
+Bachelor,Digital Media and Design,Digital Material and Social Media **,English,26,30,1914004U,2016-Spring
+Bachelor,Digital Media and Design,E-business and Entrepreneurship **,Danish,50,52,BAEBIVA1KU,2016-Spring
+Bachelor,Digital Media and Design,Expressive Media **,English,44,40,BAEXMED1KU,2016-Spring
+Bachelor,Digital Media and Design,Philosophy of Science and Technology **,English,77,80,BAPHSCT1KU,2016-Spring
+Bachelor,Digital Media and Design,Sustainable Futures **,Danish,48,52,BABAFRE1KU,2016-Spring
+Bachelor,Digital Media and Design,User Surveys and Quantitative Methods **,Danish,64,70,1914001U,2016-Spring
+Bachelor,Global Business Informatics,Database Use and Design **,English,56,75,BDBD,2016-Spring
+Bachelor,Global Business Informatics,Global Project Management **,English,60,75,BGPL,2016-Spring
+Bachelor,Global Business Informatics,IT & Work Design **,English,56,75,BDIA,2016-Spring
+Bachelor,Global Business Informatics,IT Enabled Process Improvement **,English,58,75,BSPF,2016-Spring
+Bachelor,Global Business Informatics,IT Governance & Quality Management **,English,55,80,BGKS,2016-Spring
+Bachelor,Global Business Informatics,IT and Business Process Modeling **,English,62,75,BIMF,2016-Spring
+Bachelor,Global Business Informatics,Philosophy of Science and Technology **,English,60,75,BVTT,2016-Spring
+Bachelor,Software Development,Algorithms and Data Structures **,English,88,100,BADS,2016-Spring
+Bachelor,Software Development,First-year Project: Map of Denmark: Visualization,Navigation,Searching,and Route Planning **,Danish,83,100,BFST,2016-Spring
+Bachelor,Software Development,Functional Programming **,English,77,85,BFNP,2016-Spring
+Bachelor,Software Development,Reflections about IT **,Danish,54,60,1410001U,2016-Spring
+Bachelor,Software Development,Second Year Project: Software Development in Large Teams with International Collaboration **,English,72,85,BNDN,2016-Spring
+Bachelor,Software Development,System Development and Project Organization **,English,69,85,BSUP,2016-Spring
+Bachelor,Software Development,Systematic Design of User Interfaces **,Danish,80,100,BSDB,2016-Spring
+I-KV,Qualification Process for IT Leadership and Management,Introductory Academic Project (I-KV),Danish,10,12,INAKP,2016-Spring
+M.Sc.,Digital Design and Communication,Communication Design: Applied Methods and Techniques,English,57,70,KACDAMT1KU,2016-Spring
+M.Sc.,Digital Design and Communication,Designing Interactive Artifacts,English,29,50,0213002U,2016-Spring
+M.Sc.,Digital Design and Communication,Digital Democratic Citizenship,English,33,40,KADIDEC1KU,2016-Spring
+M.Sc.,Digital Design and Communication,Digital Innovation,Danish,89,90,0213004U-1,2016-Spring
+M.Sc.,Digital Design and Communication,Digital Innovation,Danish,83,90,0213004U-2,2016-Spring
+M.Sc.,Digital Design and Communication,Digital Media Aestethics,English,24,40,0213003U,2016-Spring
+M.Sc.,Digital Design and Communication,Digital Rhetorics,Danish,78,90,0105019U-2,2016-Spring
+M.Sc.,Digital Design and Communication,Digital Rhetorics,Danish,87,90,0105019U-1,2016-Spring
+M.Sc.,Digital Design and Communication,Introduction to Service Design,English,71,86,0213006U,2016-Spring
+M.Sc.,Digital Design and Communication,Oversættelse mangler,Danish,38,45,KASOMKN1KU,2016-Spring
+M.Sc.,Digital Design and Communication,Thesis Preparation DDK,Danish,49,130,TPDDK,2016-Spring
+M.Sc.,Digital Innovation & Management,Big Data Processes,English,48,90,BIDAP,2016-Spring
+M.Sc.,Digital Innovation & Management,Big Data Processes with Specialisation Project,English,16,40,BDPSP,2016-Spring
+M.Sc.,Digital Innovation & Management,Business and Management Foundations,English,36,70,DBMF,2016-Spring
+M.Sc.,Digital Innovation & Management,Digital Management,Governance and Accountability,English,131,126,DIMGA,2016-Spring
+M.Sc.,Digital Innovation & Management,Digital Management,Governance and Accountability with Project,English,8,40,DMGAP,2016-Spring
+M.Sc.,Digital Innovation & Management,Digital technology and New Business Models,English,53,80,DTNB,2016-Spring
+M.Sc.,Digital Innovation & Management,Digital technology and New Business Models with Specialisation Project,English,23,40,DTNP,2016-Spring
+M.Sc.,Digital Innovation & Management,ESST Intro,English,0,10,KBESINT1KU,2016-Spring
+M.Sc.,Digital Innovation & Management,ESST Project,English,0,4,DEST-P,2016-Spring
+M.Sc.,Digital Innovation & Management,Enterprise Architecture,English,63,100,KBENARC1KU,2016-Spring
+M.Sc.,Digital Innovation & Management,Enterprise Services - Second Part of Specialisation,English,15,40,KBESSPS1KU,2016-Spring
+M.Sc.,Digital Innovation & Management,Foundations in Development of IT,English,35,70,DFDI,2016-Spring
+M.Sc.,Digital Innovation & Management,Navigating Complexity: Mapping Visualisation and Decisionmaking,English,42,60,DNCM,2016-Spring
+M.Sc.,Digital Innovation & Management,Open Innovation and Design,English,78,85,DOID,2016-Spring
+M.Sc.,Digital Innovation & Management,Writing Innovation Studio,English,38,40,KBWRINS1KU,2016-Spring
+M.Sc.,Games,3D Game Art,English,24,27,M3DA,2016-Spring
+M.Sc.,Games,Artificial Life & Evolutionary Robotics: Theory,Methods and Art,English,21,60,GAER,2016-Spring
+M.Sc.,Games,Data Mining,English,56,96,MDMI,2016-Spring
+M.Sc.,Games,Digital Game Theory,English,6,35,MDGT,2016-Spring
+M.Sc.,Games,Game Development,English,56,75,MSU,2016-Spring
+M.Sc.,Games,Game World Design,English,36,50,KGGAWOD1KU,2016-Spring
+M.Sc.,Games,Graphics Programming,English,11,40,GRPRP,2016-Spring
+M.Sc.,Games,Programming for Game Designers,English,19,30,MPGD,2016-Spring
+M.Sc.,Software Development and Technology,Advanced Algorithms Seminar,English,22,35,SAAS,2016-Spring
+M.Sc.,Software Development and Technology,Advanced Programming,English,87,120,KSADPRO1KU,2016-Spring
+M.Sc.,Software Development and Technology,Business Process Modelling and Analysis,English,11,25,DBMA,2016-Spring
+M.Sc.,Software Development and Technology,Database Tuning,English,10,40,SDTI,2016-Spring
+M.Sc.,Software Development and Technology,Database Tuning Project,English,6,30,SDT2,2016-Spring
+M.Sc.,Software Development and Technology,Foundations of Computing - Algorithms and Data Structures,English,58,49,SGDS,2016-Spring
+M.Sc.,Software Development and Technology,Frameworks and Architectures for the Web,English,42,40,FRWAW,2016-Spring
+M.Sc.,Software Development and Technology,Intelligent Systems Programming,English,75,100,SISP,2016-Spring
+M.Sc.,Software Development and Technology,Introduction to Database Design MSc,English,31,43,SIDD,2016-Spring
+M.Sc.,Software Development and Technology,Introduction to Graphics and Image Analysis,English,8,45,SIGB,2016-Spring
+M.Sc.,Software Development and Technology,Mathematical Analysis and Linear Algebra,English,11,25,SMAL,2016-Spring
+M.Sc.,Software Development and Technology,Mobile App Development,English,66,75,MMAD,2016-Spring
+M.Sc.,Software Development and Technology,Object Oriented Programming,English,5,75,OOP,2016-Spring
+M.Sc.,Software Development and Technology,Pervasive Computing,English,25,40,SPCT,2016-Spring
+M.Sc.,Software Development and Technology,Programming Language Concepts and Implementation,English,14,25,SPLC,2016-Spring
+M.Sc.,Software Development and Technology,Programming Language Seminar,English,3,25,SPLG,2016-Spring
+M.Sc.,Software Development and Technology,System Architecture and Security,English,104,115,SSAS,2016-Spring
+M.Sc.,Software Development and Technology,Thesis Preparation SDT,English,28,60,TPSDT,2016-Spring
+Master,Interaction Design,Development of Digital Business Models,Danish,19,40,UDDIF,2016-Spring
+Master,Interaction Design,Dynamic Web Design,Danish,39,39,MDWD,2016-Spring
+Master,Interaction Design,Service Design: Theory and Practice,English,23,40,MSTP,2016-Spring
+Master,Interaction Design,Usability & User Experience - Methods and Communication,Danish,22,40,MUUF,2016-Spring
+Master,IT Leadership and Management,Business and Management,Danish,19,95,SFOL,2016-Spring
+Master,IT Leadership and Management,Change Management,Danish,21,35,MFAL,2016-Spring
+Master,IT Leadership and Management,IT Management and the Role of the IT Organisation,Danish,14,45,ILIOR,2016-Spring
+Master,IT Leadership and Management,IT Project and Programme Management,Danish,30,35,MPPS,2016-Spring
+Master,IT Leadership and Management,IT Service Management,Danish,13,30,SISM,2016-Spring
+Master,IT Leadership and Management,Methodology and Communication in IT Management,Danish,15,45,ITLMK,2016-Spring
+Master,IT Leadership and Management,Understanding Business and IT Strategy (15 ECTS),Danish,34,45,ITSFO,2016-Spring
+Master,IT Leadership and Management,Understanding Business and IT Strategy (7,5 ECTS),Danish,6,15,MBITSTF1KU,2016-Spring
+Master,Software Engineering,Advanced Software Engineering,English,24,40,SASU,2016-Spring
+Master,Software Engineering,Software Acquisition and Requirements,Danish,15,45,SANS,2016-Spring
