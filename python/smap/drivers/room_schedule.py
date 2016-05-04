@@ -92,7 +92,10 @@ class ROOM_SCHEDULE(driver.SmapDriver):
             else:
                 print "ELSE"
                 floor = "-"
-            value = long(r['empty'])
+            if r['empty']:
+                value = 0
+            else:
+                value = 1
             room = r['name']
             path = "/"+floor
             if self.get_collection(path) is None:
@@ -104,14 +107,19 @@ class ROOM_SCHEDULE(driver.SmapDriver):
                 self.add_timeseries(path+"/"+"calendar_booking",
                     "State", data_type="long", timezone=self.tz)
             self.add(path+"/"+"calendar_booking", value)
-            if "course" in r.keys():
-                c = r["course"]
-                if c != "":
-                    requests =  long(c['students_requests'])
-                    if self.get_timeseries(path+"/"+"students_course_base") is None:
-                        self.add_timeseries(path+"/"+"students_course_base",
-                            "No.", data_type="long", timezone=self.tz)
-                    self.add(path+"/"+"students_course_base", requests)
+            if room == "AUD2":
+                print value
+            if value == 1:
+                if "course" in r.keys():
+                    c = r["course"]
+                    if c != "":
+                        requests =  long(c['students_requests'])
+                        if self.get_timeseries(path+"/"+"students_course_base") is None:
+                            self.add_timeseries(path+"/"+"students_course_base",
+                                "No.", data_type="long", timezone=self.tz)
+                        if room == "2A12":
+                            print requests
+                        self.add(path+"/"+"students_course_base", requests)
 
 
     def get_room_schedules(self):
@@ -119,6 +127,8 @@ class ROOM_SCHEDULE(driver.SmapDriver):
         study_activities = self.fetch_and_parse(URL_STUDY_ACTIVITIES)
         activities = self.fetch_and_parse(URL_ACTIVITIES)
         events = study_activities + activities
+        # for e in events:
+            # printe
         # Remove duplicate events
         events = {e['uid']: e for e in events}.values()
         # Establish schedules of events for each room
@@ -129,41 +139,20 @@ class ROOM_SCHEDULE(driver.SmapDriver):
                 if room not in schedules: schedules[room] = []
                 schedules[room].append(event)
         schedules = {key: s for key, s in schedules.items() if not is_fake(key)}
-
-        # Merge adjacent and overlapping events in each schedule
-        logging.info('Merging events')
-        for schedule in schedules.itervalues():
-            schedule.sort(key=lambda event: event['start'])
-            merged = []
-            for event in schedule:
-                if merged and merged[-1]['end'] >= event['start']:
-                    merged[-1]['end'] = event['end']
-                else:
-                    merged.append(event)
-            schedule = merged
-        # Determine the status of each room and how long it will be empty for
         logging.info('Determining status of rooms')
         rooms = []
         for name, schedule in schedules.iteritems():
             room = {'name': name}
+            room['empty'] = True
             for event in schedule:
-                if self.now <= event['start']:
-                    room['empty'] = True
-                    room['until'] = format_date(event['start'])
-                    room['empty_for'] = event['start'] - self.now
-                    break
                 if event['start'] <= self.now <= event['end']:
                     room['course'] = event['course']
                     room['empty'] = False
-                    room['until'] = format_date(event['end'])
-                    room['empty_for'] = self.now - event['end']
                     break
-            if 'empty' not in room:
-                room['empty'] = True
-                room['until'] = 'For the foreseeable future'
-                room['empty_for'] = timedelta.max
+            if room['name'] == "AUD2":
+                print event
+                print room
             rooms.append(room)
-        rooms.sort(key=lambda room: room['empty_for'], reverse=True)
         return rooms
 
     def fetch_and_parse(self, url):
