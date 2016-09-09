@@ -38,6 +38,7 @@ import os, re, sys, logging
 import pytz, requests
 from datetime import datetime, timedelta
 import csv
+import time
 
 URL_STUDY_ACTIVITIES = 'https://dk.timeedit.net/web/itu/db1/public/ri6Q7Z6QQw0Z5gQ9f50on7Xx5YY00ZQ1ZYQycZw.ics'
 URL_ACTIVITIES = 'https://dk.timeedit.net/web/itu/db1/public/ri6g7058yYQZXxQ5oQgZZ0vZ56Y1Q0f5c0nZQwYQ.ics'
@@ -62,7 +63,7 @@ class ROOM_SCHEDULE(driver.SmapDriver):
         self.rate = float(opts.get('Rate', 120))
         self.url_activities = opts.get('url_activities', 'https://dk.timeedit.net/web/itu/db1/public/ri6g7058yYQZXxQ5oQgZZ0vZ56Y1Q0f5c0nZQwYQ.ics')
         self.url_study_activities = opts.get('url_study_activities', 'https://dk.timeedit.net/web/itu/db1/public/ri6Q7Z6QQw0Z5gQ9f50on7Xx5YY00ZQ1ZYQycZw.ics')
-        self.file_courses = opts.get('file_courses', 'courses.csv')
+        self.file_courses = opts.get('file_courses', 'courses_fall_2016.csv')
         self.courses = self.get_courses()
         # Fix unicode madness
         reload(sys)
@@ -76,6 +77,8 @@ class ROOM_SCHEDULE(driver.SmapDriver):
         self.now = datetime.now(pytz.timezone(self.tz))
         self.courses = self.get_courses()
         self.rooms = self.get_room_schedules()
+        if self.rooms == None:
+            return
         for r in self.rooms:
             # normal rooms
             if r['name'][0] in ['0', '1', '2', '3', '4', '5']:
@@ -107,8 +110,6 @@ class ROOM_SCHEDULE(driver.SmapDriver):
                 self.add_timeseries(path+"/"+"calendar_booking",
                     "State", data_type="long", timezone=self.tz)
             self.add(path+"/"+"calendar_booking", value)
-            if room == "AUD2":
-                print value
             if value == 1:
                 if "course" in r.keys():
                     c = r["course"]
@@ -117,8 +118,6 @@ class ROOM_SCHEDULE(driver.SmapDriver):
                         if self.get_timeseries(path+"/"+"students_course_base") is None:
                             self.add_timeseries(path+"/"+"students_course_base",
                                 "No.", data_type="long", timezone=self.tz)
-                        if room == "2A12":
-                            print requests
                         self.add(path+"/"+"students_course_base", requests)
 
 
@@ -126,6 +125,8 @@ class ROOM_SCHEDULE(driver.SmapDriver):
         # Fetch iCalendar sources and parse events
         study_activities = self.fetch_and_parse(URL_STUDY_ACTIVITIES)
         activities = self.fetch_and_parse(URL_ACTIVITIES)
+        if study_activities == None or activities == None:
+            return
         events = study_activities + activities
         # for e in events:
             # printe
@@ -157,7 +158,11 @@ class ROOM_SCHEDULE(driver.SmapDriver):
 
     def fetch_and_parse(self, url):
         logging.info('Fetching %s' % url)
-        ics = requests.get(url).text
+        try:
+            ics = requests.get(url).text
+        except requests.ConnectionError, e:
+            time.sleep(10)
+            return
         logging.info('Parsing %s' % url)
         calendar = parse(ics)
         events = [{

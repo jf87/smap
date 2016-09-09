@@ -63,6 +63,12 @@ class FHEM(driver.SmapDriver):
         self.rate = float(opts.get('Rate', 30))
         self.ip = opts.get('ip', None)
         self.tstats = []
+        self.path = "/4"
+        if self.get_collection(self.path) is None:
+            self.add_collection(self.path)
+        self.path = self.path+"/4D21"
+        if self.get_collection(self.path) is None:
+            self.add_collection(self.path)
         # Get a list of lights
         self.tstats = self.getThermostats(self.ip)
         print self.tstats
@@ -72,7 +78,7 @@ class FHEM(driver.SmapDriver):
             tstat_device = tstat["device"]
             for option in self.api:
                 if option["access"] == "rw":
-                    ts = self.add_timeseries('/'+tstat_device+'/'+option["api"],
+                    ts = self.add_timeseries(self.path+'/'+tstat_device+'/'+option["api"],
                             option["unit"], data_type=option["data_type"], timezone=self.tz)
                     setup={'model': option["act_type"], 'ip':self.ip,
                             'range': option.get("range"), 'id': tstat_name,
@@ -89,7 +95,7 @@ class FHEM(driver.SmapDriver):
                     # ts = self.add_timeseries('/'+ tstat_device + '/' + option["api"] + '_act', option["unit"], data_type=option["data_type"])
                     ts.add_actuator(act)
                 else:
-                    self.add_timeseries('/'+ tstat_device + '/' +option["api"],
+                    self.add_timeseries(self.path+'/'+ tstat_device + '/' +option["api"],
                             option["unit"], data_type=option["data_type"], timezone=self.tz)
     def start(self):
         # call self.read every self.rate seconds
@@ -105,7 +111,7 @@ class FHEM(driver.SmapDriver):
             #print val
             for option in self.api:
                 #print val["Results"][0]["Readings"][option["api"]]
-                self.add('/'+tstat_device +"/"+ option["api"],
+                self.add(self.path+'/'+tstat_device +"/"+ option["api"],
                         float(val["Results"][0]["Readings"][option["api"]]["Value"]))
 
 class Actuator(actuate.SmapActuator):

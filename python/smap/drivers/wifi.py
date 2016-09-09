@@ -36,6 +36,7 @@ from smap.util import periodicSequentialCall
 import json
 import hashlib
 import unicodedata
+import time
 
 class WIFI(driver.SmapDriver):
     devices_ts = [
@@ -47,7 +48,12 @@ class WIFI(driver.SmapDriver):
     ]
 
     def getDevices(self):
-        r = requests.get(self.url+"/hm/api/v1/devices", auth=(self.user, self.password))
+        try:
+            r = requests.get(self.url+"/hm/api/v1/devices", auth=(self.user, self.password))
+        except requests.exceptions.ConnectionError, e:
+                print e
+                time.sleep(10)
+                return
         j = json.loads(r.text)
         for d in j:
             hostName = d["hostName"]
@@ -77,7 +83,6 @@ class WIFI(driver.SmapDriver):
             if self.get_collection(path) is None:
                 self.add_collection(path)
             path = path+'/'+location
-            print location
             if self.get_collection(path) is None:
                 self.add_collection(path)
             path = path+'/'+hostName
@@ -133,7 +138,11 @@ class WIFI(driver.SmapDriver):
     ]
 
     def getClients(self):
-        r = requests.get(self.url+"/hm/api/v1/clients?q=10", auth=(self.user, self.password))
+        try:
+            r = requests.get(self.url+"/hm/api/v1/clients?q=10", auth=(self.user, self.password))
+        except requests.exceptions.ConnectionError, e:
+                time.sleep(10)
+                return
         j = json.loads(r.text)
         for c in j:
             deviceName = c["deviceName"]
