@@ -115,6 +115,8 @@ class ROOM_SCHEDULE(driver.SmapDriver):
                     c = r["course"]
                     if c != "":
                         requests =  long(c['students_requests'])
+                        print c["class_code"]
+                        print c["students_requests"]
                         if self.get_timeseries(path+"/"+"students_course_base") is None:
                             self.add_timeseries(path+"/"+"students_course_base",
                                 "No.", data_type="long", timezone=self.tz)
@@ -128,8 +130,6 @@ class ROOM_SCHEDULE(driver.SmapDriver):
         if study_activities == None or activities == None:
             return
         events = study_activities + activities
-        # for e in events:
-            # printe
         # Remove duplicate events
         events = {e['uid']: e for e in events}.values()
         # Establish schedules of events for each room
@@ -147,7 +147,8 @@ class ROOM_SCHEDULE(driver.SmapDriver):
             room['empty'] = True
             for event in schedule:
                 if event['start'] <= self.now <= event['end']:
-                    room['course'] = event['course']
+                    room['course'] = self.get_course(event['summary'])
+                    room['summary'] = event['summary']
                     room['empty'] = False
                     break
             if room['name'] == "AUD2":
@@ -170,9 +171,7 @@ class ROOM_SCHEDULE(driver.SmapDriver):
             'start': event['DTSTART'].astimezone(pytz.timezone(self.tz)),
             'end': event['DTEND'].astimezone(pytz.timezone(self.tz)),
             'uid': event['UID'],
-            'class_code': get_class_code(event['SUMMARY']),
-            'class_name': get_class_name(event['SUMMARY']),
-            'course': self.get_course(get_class_code(event['SUMMARY']))
+            'summary': event['SUMMARY'],
         } for event in calendar]
         return events
 
@@ -189,9 +188,11 @@ class ROOM_SCHEDULE(driver.SmapDriver):
                                       "semester": rows[7], }) for rows in reader)
             return courses
 
-    def get_course(self, course):
-        if course in self.courses.keys():
-            return self.courses[course]
+    def get_course(self, summary):
+        for k in self.courses.keys():
+            if k in summary:
+                # print "found "+k+" in "+summary
+                return self.courses[k]
         return ""
 
 
@@ -209,10 +210,12 @@ def is_fake(room):
     return any([re.search(fake, room, re.IGNORECASE) for fake in FAKES])
 
 
-# TODO this does not always work...
+# TODO this does not always work...deprecated
 def get_class_code(summary):
+    print summary
     x = findnth(summary, ",", 1)
     y  = findnth(summary, ",", 2)
+    print summary[x+2:y]
     return summary[x+2:y]
 
 def get_class_name(summary):

@@ -93,6 +93,7 @@ class WIFI(driver.SmapDriver):
                 num_id = self.devices[hostName]["numericalID"]
             except:
                 print "could not get numericalID"
+                print hostName
                 num_id = 0
             c['Metadata'] = {
                 'Location' : {
@@ -107,7 +108,7 @@ class WIFI(driver.SmapDriver):
                 },
                 "System": "WiFi",
                 'Extra' : {
-                    "NumericalID": num_id
+                    "NumericalID": str(num_id)
                 }
             }
             for ts in self.devices_ts:
@@ -124,6 +125,7 @@ class WIFI(driver.SmapDriver):
                         self.add_timeseries(path+"/"+ts["name"],
                             ts["unit"], data_type=ts["type"], timezone=self.tz)
                     self.add(path+"/"+ts["name"], v)
+                    # print "added " + str(v)
                 except:
                     if v is None:
                         v = "None"
@@ -141,6 +143,8 @@ class WIFI(driver.SmapDriver):
         try:
             r = requests.get(self.url+"/hm/api/v1/clients?q=10", auth=(self.user, self.password))
         except requests.exceptions.ConnectionError, e:
+                print e
+                print "timeout..."
                 time.sleep(10)
                 return
         j = json.loads(r.text)
@@ -149,7 +153,6 @@ class WIFI(driver.SmapDriver):
             deviceName = unicodedata.normalize('NFKD', deviceName).encode('ascii','ignore')
             mac = c["macAddress"]
             mac_hashed = hashlib.sha512(mac.encode('latin-1')).hexdigest()
-            mac_hashed = mac_hashed.replace("/", "")
             try:
                 clientOS = c["clientOS"]
                 clientOS = unicodedata.normalize('NFKD', clientOS).encode('ascii','ignore')
@@ -172,7 +175,6 @@ class WIFI(driver.SmapDriver):
             except:
                 print "could not get numericalID :("
                 c["numericalID"] = 0
-
             for ts in self.clients_ts:
                 try:
                     v = c[ts['key']]
@@ -195,9 +197,9 @@ class WIFI(driver.SmapDriver):
                         self.set_metadata(path, {
                             'Extra/ID' : str(mac_hashed)
                         })
-                    self.set_metadata(path, {
-                        'Instrument/Model' : 'WiFi-Client'
-                    })
+                        self.set_metadata(path, {
+                            'Instrument/Model' : 'WiFi-Client'
+                        })
                     self.add(path+"/"+ts["name"], v)
                 except:
                     if v is None:
@@ -217,7 +219,6 @@ class WIFI(driver.SmapDriver):
                 self.devices = json.loads(f.read())
         else:
             raise
-        print self.devices
         # Get all accesspoints
         self.getDevices()
 
